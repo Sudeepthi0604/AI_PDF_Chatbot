@@ -1,0 +1,17 @@
+# Virtual Environment
+ai_pdf/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# FAISS index
+*.faiss
+*.pkl
+
+# Temporary files
+temp.txt
