@@ -7,16 +7,13 @@ import numpy as np
 import faiss
 from PyPDF2 import PdfReader
 import google.generativeai as genai
-import time
 
 # =====================
 # CONFIG
 # =====================
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 
-
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 
@@ -132,7 +129,7 @@ if menu == "Signup":
         else:
             st.error("Username already exists")
 
-if menu == "Login":
+elif menu == "Login":
     st.subheader("Login")
 
     username = st.text_input("Username")
@@ -176,17 +173,16 @@ def extract_text(pdf_files):
             if page_text:
                 text += page_text
 
-        all_text[pdf.name] = text
+        if text.strip():
+            all_text[pdf.name] = text
 
     return all_text
 
 
 def chunk_text(text, chunk_size=1000, overlap=200):
     chunks = []
-
     for i in range(0, len(text), chunk_size - overlap):
         chunks.append(text[i:i + chunk_size])
-
     return chunks
 
 
@@ -197,13 +193,19 @@ def embed_text(texts):
     vectors = []
 
     for t in texts:
+        if not t.strip():
+            continue
+
         res = genai.embed_content(
-            model="models/embedding-004",
+            model="models/embedding-001",
             content=t
         )
+
         vectors.append(res["embedding"])
 
-        time.sleep(0.05)
+    if len(vectors) == 0:
+        st.error("No valid text to embed.")
+        st.stop()
 
     return np.array(vectors, dtype="float32")
 
@@ -211,7 +213,7 @@ def embed_text(texts):
 @st.cache_data(show_spinner=False)
 def embed_query(text):
     res = genai.embed_content(
-        model="models/text-embedding-004",
+        model="models/embedding-001",
         content=text
     )
     return np.array([res["embedding"]], dtype="float32")
@@ -239,7 +241,12 @@ def search(query, index, chunks, metadata, k=5):
 
     _, I = index.search(q_vec, k)
 
-    return [(metadata[i], chunks[i]) for i in I[0]]
+    results = []
+    for i in I[0]:
+        if i != -1:
+            results.append((metadata[i], chunks[i]))
+
+    return results
 
 
 # =====================
@@ -287,6 +294,10 @@ if st.button("Process PDFs") and pdf_files:
             all_chunks.append(c)
             metadata.append(name)
 
+    if len(all_chunks) == 0:
+        st.error("No text found in PDFs")
+        st.stop()
+
     st.session_state.index = build_index(all_chunks)
     st.session_state.chunks = all_chunks
     st.session_state.metadata = metadata
@@ -294,8 +305,10 @@ if st.button("Process PDFs") and pdf_files:
     st.success("PDFs processed successfully!")
 
 
-# ✅ SAFE CHECK
-if "index" not in st.session_state or st.session_state.index is None:
+# =====================
+# SAFE CHECK
+# =====================
+if st.session_state.index is None:
     st.info("Upload and process PDFs first")
     st.stop()
 
@@ -327,6 +340,6 @@ if st.button("Ask") and question:
 st.subheader("💬 Chat History")
 
 for q, a in reversed(st.session_state.chat_history):
-    st.markdown(f"**🧑 {st.session_state.user}:** {q}")
-    st.markdown(f"**🤖 Bot:** {a}")
+    st.markdown(f"*🧑 You:* {q}")
+    st.markdown(f"*🤖 Bot:* {a}")
     st.markdown("---")
