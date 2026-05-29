@@ -68,12 +68,14 @@ streamlit run app.py
 
 ## Project Structure 📂
 
+## Project Structure 📂
+
 ```bash
 AI_PDF_Chatbot/
+│── ai_pdf/
 │── app.py
 │── requirements.txt
 │── .gitignore
-│── users.db
 │── README.md
 ```
 
