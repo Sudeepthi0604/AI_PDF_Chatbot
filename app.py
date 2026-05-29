@@ -9,16 +9,20 @@ from PyPDF2 import PdfReader
 import google.generativeai as genai
 import time
 
-
+# =====================
 # CONFIG
-
+# =====================
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 
-API_KEY = "AIzaSyCPfuMTrwD9Kt_lswrZq1I5RItX1cfZhdo"
+API_KEY = "YOUR_API_KEY_HERE"  # الأفضل: use st.secrets in deployment
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
-# DATABASE INIT
 
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+
+# =====================
+# DATABASE
+# =====================
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
@@ -39,8 +43,9 @@ def init_db():
 init_db()
 
 
-# PASSWORD HASH (PBKDF2)
-
+# =====================
+# PASSWORD HASHING
+# =====================
 def hash_password(password, salt=None):
     if not salt:
         salt = secrets.token_hex(16)
@@ -54,8 +59,6 @@ def hash_password(password, salt=None):
 
     return base64.b64encode(pwd_hash).decode(), salt
 
-
-# CREATE USER
 
 def create_user(username, password):
     conn = sqlite3.connect("users.db")
@@ -76,17 +79,11 @@ def create_user(username, password):
         conn.close()
 
 
-# VERIFY USER
-
 def verify_user(username, password):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
 
-    c.execute(
-        "SELECT password_hash, salt FROM users WHERE username=?",
-        (username,)
-    )
-
+    c.execute("SELECT password_hash, salt FROM users WHERE username=?", (username,))
     result = c.fetchone()
     conn.close()
 
@@ -99,34 +96,30 @@ def verify_user(username, password):
     return stored_hash == new_hash
 
 
+# =====================
 # SESSION STATE
-
+# =====================
 if "auth" not in st.session_state:
     st.session_state.auth = False
-
 if "user" not in st.session_state:
     st.session_state.user = None
-
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-
 if "index" not in st.session_state:
     st.session_state.index = None
-
 if "chunks" not in st.session_state:
     st.session_state.chunks = []
-
 if "metadata" not in st.session_state:
     st.session_state.metadata = []
 
 
+# =====================
 # AUTH UI
-
-st.title("📄🔐 Production AI PDF Chatbot")
+# =====================
+st.title("📄🔐 AI PDF Chatbot")
 
 menu = st.sidebar.radio("Auth", ["Login", "Signup"])
 
-# SIGNUP
 if menu == "Signup":
     st.subheader("Create Account")
 
@@ -139,7 +132,6 @@ if menu == "Signup":
         else:
             st.error("Username already exists")
 
-# LOGIN
 if menu == "Login":
     st.subheader("Login")
 
@@ -155,12 +147,10 @@ if menu == "Login":
         else:
             st.error("Invalid credentials")
 
-# BLOCK UNAUTHORIZED USERS
 if not st.session_state.auth:
     st.warning("Please login to access the chatbot")
     st.stop()
 
-# LOGOUT
 st.sidebar.success(f"Logged in as: {st.session_state.user}")
 
 if st.sidebar.button("Logout"):
@@ -171,8 +161,9 @@ if st.sidebar.button("Logout"):
     st.rerun()
 
 
-# PDF FUNCTIONS
-
+# =====================
+# PDF PROCESSING
+# =====================
 def extract_text(pdf_files):
     all_text = {}
 
@@ -189,6 +180,7 @@ def extract_text(pdf_files):
 
     return all_text
 
+
 def chunk_text(text, chunk_size=1000, overlap=200):
     chunks = []
 
@@ -197,56 +189,48 @@ def chunk_text(text, chunk_size=1000, overlap=200):
 
     return chunks
 
-# EMBEDDING FUNCTIONS
 
-def embed_text(texts, batch_size=20):
-    all_vectors = []
+# =====================
+# EMBEDDINGS (FIXED)
+# =====================
+def embed_text(texts):
+    vectors = []
 
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-
-        res = client.models.embed_content(
-            model="gemini-embedding-001",
-            contents=batch
+    for t in texts:
+        res = genai.embed_content(
+            model="models/text-embedding-004",
+            content=t
         )
+        vectors.append(res["embedding"])
 
-        vectors = np.array(
-            [emb.values for emb in res.embeddings],
-            dtype="float32"
-        )
+        time.sleep(0.05)
 
-        all_vectors.append(vectors)
+    return np.array(vectors, dtype="float32")
 
-        time.sleep(0.1)
-
-    return np.vstack(all_vectors)
-
-
-# QUERY EMBEDDING (CACHED)
 
 @st.cache_data(show_spinner=False)
 def embed_query(text):
-    res = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=[text]
+    res = genai.embed_content(
+        model="models/text-embedding-004",
+        content=text
     )
+    return np.array([res["embedding"]], dtype="float32")
 
-    return np.array([res.embeddings[0].values], dtype="float32")
 
-
+# =====================
 # FAISS INDEX
-
+# =====================
 def build_index(all_chunks):
     vectors = embed_text(all_chunks)
 
     faiss.normalize_L2(vectors)
 
     d = vectors.shape[1]
-
     index = faiss.IndexFlatIP(d)
     index.add(vectors)
 
     return index
+
 
 def search(query, index, chunks, metadata, k=5):
     q_vec = embed_query(query)
@@ -257,8 +241,10 @@ def search(query, index, chunks, metadata, k=5):
 
     return [(metadata[i], chunks[i]) for i in I[0]]
 
-# GEMINI ANSWER
 
+# =====================
+# GEMINI ANSWER
+# =====================
 def ask_gemini(context, question):
     prompt = f"""
 You are a helpful AI assistant.
@@ -272,16 +258,13 @@ Question:
 Answer clearly and simply:
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
+    response = model.generate_content(prompt)
     return response.text
 
 
-# UI CHATBOT
-
+# =====================
+# UI - PDF UPLOAD
+# =====================
 st.header("📄 AI PDF Chatbot")
 
 pdf_files = st.file_uploader(
@@ -310,12 +293,15 @@ if st.button("Process PDFs") and pdf_files:
 
     st.success("PDFs processed successfully!")
 
-# SAFETY CHECK
+
 if st.session_state.index is None:
     st.info("Upload and process PDFs first")
     st.stop()
 
-# CHAT INPUT
+
+# =====================
+# CHAT
+# =====================
 question = st.text_input("Ask anything from your PDFs")
 
 if st.button("Ask") and question:
@@ -333,7 +319,10 @@ if st.button("Ask") and question:
 
     st.session_state.chat_history.append((question, answer))
 
+
+# =====================
 # CHAT HISTORY
+# =====================
 st.subheader("💬 Chat History")
 
 for q, a in reversed(st.session_state.chat_history):
