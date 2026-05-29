@@ -35,7 +35,7 @@ cd AI_PDF_Chatbot
 Create virtual environment:
 
 ```bash
-python -m venv venv
+python -m venv ai_pdf
 ```
 
 Activate virtual environment:
@@ -43,7 +43,7 @@ Activate virtual environment:
 ### Windows
 
 ```bash
-venv\Scripts\activate
+ai_pdf\Scripts\activate
 ```
 
 Install dependencies:
