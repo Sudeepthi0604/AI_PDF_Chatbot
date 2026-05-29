@@ -14,8 +14,8 @@ import time
 # =====================
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 
-GOOGLE_API_KEY = "AIzaSyCPfuMTrwD9Kt_lswrZq1I5RItX1cfZhdo"
-genai.configure(api_key=API_KEY)
+
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
 model = genai.GenerativeModel("gemini-1.5-flash")
 
@@ -191,7 +191,7 @@ def chunk_text(text, chunk_size=1000, overlap=200):
 
 
 # =====================
-# EMBEDDINGS (FIXED)
+# EMBEDDINGS
 # =====================
 def embed_text(texts):
     vectors = []
@@ -294,7 +294,8 @@ if st.button("Process PDFs") and pdf_files:
     st.success("PDFs processed successfully!")
 
 
-if st.session_state.index is None:
+# ✅ SAFE CHECK
+if "index" not in st.session_state or st.session_state.index is None:
     st.info("Upload and process PDFs first")
     st.stop()
 
