@@ -1,6 +1,6 @@
-streamlit==1.36.0
-numpy==1.26.4
+streamlit
+numpy
 faiss-cpu
-pypdf2==3.0.1
-python-dotenv==1.0.1
+PyPDF2
+python-dotenv
 google-generativeai
