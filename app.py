@@ -14,7 +14,7 @@ import time
 # =====================
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 
-API_KEY = "YOUR_API_KEY_HERE"  # الأفضل: use st.secrets in deployment
+API_KEY = st.secrets["AIzaSyCPfuMTrwD9Kt_lswrZq1I5RItX1cfZhdo"]
 genai.configure(api_key=API_KEY)
 
 model = genai.GenerativeModel("gemini-1.5-flash")
