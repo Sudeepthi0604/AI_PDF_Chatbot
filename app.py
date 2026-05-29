@@ -6,7 +6,7 @@ import base64
 import numpy as np
 import faiss
 from PyPDF2 import PdfReader
-from google import genai
+import google.generativeai as genai
 import time
 
 
