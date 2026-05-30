@@ -221,7 +221,7 @@ def embed_text(texts):
             continue
 
         response = genai.embed_content(
-            model="model="models/gemini-embedding-001"",
+            model="models/gemini-embedding-001",
             content=text,
             task_type="retrieval_document"
         )
@@ -240,7 +240,7 @@ def embed_text(texts):
 @st.cache_data(show_spinner=False)
 def embed_query(text):
     response = genai.embed_content(
-        model="model="models/gemini-embedding-001"",
+        model="models/gemini-embedding-001",
         content=text,
         task_type="retrieval_query"
     )
