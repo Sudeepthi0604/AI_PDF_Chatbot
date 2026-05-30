@@ -12,15 +12,10 @@ import google.generativeai as genai
 # CONFIG
 # =====================
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
-st.write("App Started")
+
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-try:
-    for m in genai.list_models():
-        st.write(m.name)
-except Exception as e:
-    st.error(e)
-st.write("Google Config Loaded")
-model = genai.GenerativeModel("gemini-2.0-flash")
+
+model = genai.GenerativeModel("gemini-2.5-flash")
     
 
 
@@ -205,7 +200,7 @@ def embed_text(texts):
 
         try:
             res = genai.embed_content(
-                model="models/text-embedding-004",
+                model="models/gemini-embedding-001",
                 content=t
             )
 
@@ -222,7 +217,7 @@ def embed_text(texts):
 def embed_query(text):
     try:
         res = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-001",
             content=text
         )
         return np.array([res["embedding"]], dtype="float32")
