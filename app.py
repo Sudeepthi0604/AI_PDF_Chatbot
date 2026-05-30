@@ -332,10 +332,10 @@ if st.button("Process PDFs") and pdf_files:
         st.error("No text found in PDFs")
         st.stop()
 
-    with st.spinner("🧠 Creating embeddings... (this may take time)"):
-        st.session_state.index = build_index(all_chunks)
-        st.session_state.chunks = all_chunks
-        st.session_state.metadata = metadata
+    # 🔥 MUST BE OUTSIDE if-block
+    st.session_state.index = build_index(all_chunks)
+    st.session_state.chunks = all_chunks
+    st.session_state.metadata = metadata
 
     st.success("PDFs processed successfully!")
 
