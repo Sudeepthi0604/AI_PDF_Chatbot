@@ -341,7 +341,7 @@ if st.button("Process PDFs") and pdf_files and "index" not in st.session_state:
 # =====================
 # SAFE CHECK
 # =====================
-if st.session_state.get(index) is None:
+if st.session_state.get("index") is None:
     st.info("Upload and process PDFs first")
     st.stop()
 
