@@ -14,6 +14,7 @@ import google.generativeai as genai
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 st.write("Secrets keys:",list(st.secrets.keys()))
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 
 # =====================
@@ -197,7 +198,7 @@ def embed_text(texts):
 
         res = genai.embed_content(
             model="text-embedding-004",
-            content=text
+            content=t
         )
 
         vectors.append(res["embedding"])
