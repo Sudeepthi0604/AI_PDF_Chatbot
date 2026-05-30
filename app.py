@@ -193,12 +193,12 @@ def embed_text(texts):
     vectors = []
 
     for t in texts:
-        if not t.strip():
+        if not text.strip():
             continue
 
         res = genai.embed_content(
-            model="models/embedding-004",
-            content=t
+            model="text-embedding-004",
+            content=text
         )
 
         vectors.append(res["embedding"])
@@ -213,7 +213,7 @@ def embed_text(texts):
 @st.cache_data(show_spinner=False)
 def embed_query(text):
     res = genai.embed_content(
-        model="models/embedding-004",
+        model="text-embedding-004",
         content=text
     )
     return np.array([res["embedding"]], dtype="float32")
