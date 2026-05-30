@@ -3,4 +3,4 @@ numpy
 faiss-cpu
 PyPDF2
 python-dotenv
-google-generativeai
+google-generativeal==0.8.5
