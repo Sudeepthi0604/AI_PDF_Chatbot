@@ -7,6 +7,11 @@ import numpy as np
 import faiss
 from PyPDF2 import PdfReader
 import google.generativeai as genai
+import os
+
+# 🔥 CRITICAL FIX (ADD HERE)
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
 # =====================
 # CONFIG
@@ -198,35 +203,26 @@ def embed_text(texts):
         if not t.strip():
             continue
 
-        try:
-            res = genai.embed_content(
-                model="models/gemini-embedding-2",
-                content=t
-            )
+        response = genai.embed_content(
+            model="models/embedding-001",
+            content=t,
+            task_type="retrieval_document"
+        )
 
-            vectors.append(res["embedding"])
-
-        except Exception as e:
-            st.error(f"Embedding Error: {e}")
-            st.stop()
+        vectors.append(response["embedding"])
 
     return np.array(vectors, dtype="float32")
 
 
 @st.cache_data(show_spinner=False)
 def embed_query(text):
-    try:
-        res = genai.embed_content(
-            model="models/gemini-embedding-2",
-            content=text
-        )
-        return np.array([res["embedding"]], dtype="float32")
+    response = genai.embed_content(
+        model="models/embedding-001",
+        content=text,
+        task_type="retrieval_query"
+    )
 
-    except Exception as e:
-        st.error(f"Query Embedding Error: {e}")
-        st.stop()
-
-
+    return np.array([response["embedding"]], dtype="float32")
 # =====================
 # FAISS INDEX
 # =====================
