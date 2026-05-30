@@ -11,11 +11,6 @@ import google.generativeai as genai
 
 
 api_key = st.secrets.get("GOOGLE_API_KEY")
-
-if not api_key:
-    st.error("API Key missing in secrets.toml")
-    st.stop()
-
 genai.configure(api_key=api_key)
 
 
