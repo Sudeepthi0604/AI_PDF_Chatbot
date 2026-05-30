@@ -14,6 +14,11 @@ import google.generativeai as genai
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 st.write("App Started")
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+try:
+    for m in genai.list_models():
+        st.write(m.name)
+except Exception as e:
+    st.error(e)
 st.write("Google Config Loaded")
 model = genai.GenerativeModel("gemini-2.0-flash")
     
