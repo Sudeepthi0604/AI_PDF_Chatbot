@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import sqlite3
 import hashlib
@@ -7,18 +8,21 @@ import numpy as np
 import faiss
 from PyPDF2 import PdfReader
 import google.generativeai as genai
-import os
 
-# 🔥 CRITICAL FIX (ADD HERE)
-os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+
+api_key = st.secrets.get("GOOGLE_API_KEY")
+
+if not api_key:
+    st.error("API Key missing in secrets.toml")
+    st.stop()
+
+os.environ["GOOGLE_API_KEY"] = api_key
+genai.configure(api_key=api_key)
 
 # =====================
 # CONFIG
 # =====================
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
-
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
 model = genai.GenerativeModel("gemini-2.5-flash")
     
@@ -178,7 +182,7 @@ def extract_text(pdf_files):
         for page in reader.pages:
             page_text = page.extract_text()
             if page_text:
-                text += page_text
+                text += page_text + "\n"
 
         if text.strip():
             all_text[pdf.name] = text
@@ -190,6 +194,9 @@ def chunk_text(text, chunk_size=1000, overlap=200):
     chunks = []
     start = 0
 
+    if len(text) == 0:
+        return []
+
     while start < len(text):
         end = start + chunk_size
         chunks.append(text[start:end])
@@ -199,6 +206,8 @@ def chunk_text(text, chunk_size=1000, overlap=200):
             start = 0
 
     return chunks
+
+
 
 
 # =====================
@@ -212,30 +221,40 @@ def embed_text(texts):
             continue
 
         response = genai.embed_content(
-            model="models/embedding-001",
-            content=t,
+            model="models/text-embedding-004",
+            content=text,
             task_type="retrieval_document"
         )
 
         vectors.append(response["embedding"])
 
-    return np.array(vectors, dtype="float32")
+    # 🔥 ADD THIS SAFETY CHECK HERE
+    if len(vectors) == 0:
+        st.error("No embeddings generated")
+        st.stop()
+
+    vectors = np.array(vectors, dtype="float32")
+    return vectors
 
 
 @st.cache_data(show_spinner=False)
 def embed_query(text):
     response = genai.embed_content(
-        model="models/embedding-001",
+        model="models/text-embedding-004",
         content=text,
         task_type="retrieval_query"
     )
 
     return np.array([response["embedding"]], dtype="float32")
-# =====================
+
+   
 # FAISS INDEX
 # =====================
 def build_index(all_chunks):
     vectors = embed_text(all_chunks)
+
+    if len(vectors) == 0:
+        raise ValueError("No embeddings generated")
 
     faiss.normalize_L2(vectors)
 
@@ -244,8 +263,7 @@ def build_index(all_chunks):
     index.add(vectors)
 
     return index
-
-
+    
 def search(query, index, chunks, metadata, k=5):
     q_vec = embed_query(query)
 
@@ -254,8 +272,11 @@ def search(query, index, chunks, metadata, k=5):
     _, I = index.search(q_vec, k)
 
     results = []
+
     for i in I[0]:
-        if i != -1:
+        if i == -1:
+            continue
+        if i < len(chunks):
             results.append((metadata[i], chunks[i]))
 
     return results
@@ -292,7 +313,7 @@ pdf_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-if st.button("Process PDFs") and pdf_files:
+if st.button("Process PDFs") and pdf_files and "index" not in st.session_state:
 
     all_text = extract_text(pdf_files)
 
@@ -320,7 +341,7 @@ if st.button("Process PDFs") and pdf_files:
 # =====================
 # SAFE CHECK
 # =====================
-if st.session_state.index is None:
+if st.session_state.get(index) is None:
     st.info("Upload and process PDFs first")
     st.stop()
 
@@ -352,8 +373,8 @@ if st.button("Ask") and question:
 st.subheader("💬 Chat History")
 
 for q, a in reversed(st.session_state.chat_history):
-    st.markdown(f"*🧑 You:* {q}")
-    st.markdown(f"*🤖 Bot:* {a}")
+    st.markdown(f"**🧑 You:** {q}")
+    st.markdown(f"**🤖 Bot:** {a}")
     st.markdown("---")
 
    
