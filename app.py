@@ -313,9 +313,10 @@ pdf_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-if st.button("Process PDFs") and pdf_files and "index" not in st.session_state:
+if st.button("Process PDFs") and pdf_files:
 
-    all_text = extract_text(pdf_files)
+    with st.spinner("📄 Reading PDFs..."):
+        all_text = extract_text(pdf_files)
 
     all_chunks = []
     metadata = []
@@ -331,12 +332,12 @@ if st.button("Process PDFs") and pdf_files and "index" not in st.session_state:
         st.error("No text found in PDFs")
         st.stop()
 
-    st.session_state.index = build_index(all_chunks)
-    st.session_state.chunks = all_chunks
-    st.session_state.metadata = metadata
+    with st.spinner("🧠 Creating embeddings... (this may take time)"):
+        st.session_state.index = build_index(all_chunks)
+        st.session_state.chunks = all_chunks
+        st.session_state.metadata = metadata
 
     st.success("PDFs processed successfully!")
-
 
 # =====================
 # SAFE CHECK
