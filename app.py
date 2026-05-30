@@ -18,6 +18,11 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
+models = genai.list_models()
+
+for m in models:
+    print(m.name)
+
 # =====================
 # CONFIG
 # =====================
@@ -220,7 +225,7 @@ def embed_text(texts):
             continue
 
         response = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/embedding-001",
             content=text,
             task_type="retrieval_document"
         )
@@ -239,7 +244,7 @@ def embed_text(texts):
 @st.cache_data(show_spinner=False)
 def embed_query(text):
     response = genai.embed_content(
-        model="models/text-embedding-004",
+        model="models/embedding-001",
         content=text,
         task_type="retrieval_query"
     )
