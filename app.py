@@ -14,6 +14,15 @@ import google.generativeai as genai
 st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 st.write("Secrets keys:",list(st.secrets.keys()))
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+
+
+try:
+    test_model = genai.GenerativeModel("gemini-1.5-flash")
+    response = test_model.generate_content("Hello")
+    st.success("API Key Working")
+except Exception as e:
+    st.error(f"API Error: {e}")
+    st.stop()
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 
@@ -196,27 +205,33 @@ def embed_text(texts):
         if not t.strip():
             continue
 
-        res = genai.embed_content(
-            model="text-embedding-004",
-            content=t
-        )
+        try:
+            res = genai.embed_content(
+                model="models/text-embedding-004",
+                content=t
+            )
 
-        vectors.append(res["embedding"])
+            vectors.append(res["embedding"])
 
-    if len(vectors) == 0:
-        st.error("No valid text to embed.")
-        st.stop()
+        except Exception as e:
+            st.error(f"Embedding Error: {e}")
+            st.stop()
 
     return np.array(vectors, dtype="float32")
 
 
 @st.cache_data(show_spinner=False)
 def embed_query(text):
-    res = genai.embed_content(
-        model="text-embedding-004",
-        content=text
-    )
-    return np.array([res["embedding"]], dtype="float32")
+    try:
+        res = genai.embed_content(
+            model="models/text-embedding-004",
+            content=text
+        )
+        return np.array([res["embedding"]], dtype="float32")
+
+    except Exception as e:
+        st.error(f"Query Embedding Error: {e}")
+        st.stop()
 
 
 # =====================
