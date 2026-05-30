@@ -16,7 +16,6 @@ if not api_key:
     st.error("API Key missing in secrets.toml")
     st.stop()
 
-os.environ["GOOGLE_API_KEY"] = api_key
 genai.configure(api_key=api_key)
 
 # =====================
@@ -221,7 +220,7 @@ def embed_text(texts):
             continue
 
         response = genai.embed_content(
-            model="models/gemini-embedding-001",
+            model="models/text-embedding-004",
             content=text,
             task_type="retrieval_document"
         )
@@ -240,7 +239,7 @@ def embed_text(texts):
 @st.cache_data(show_spinner=False)
 def embed_query(text):
     response = genai.embed_content(
-        model="models/gemini-embedding-001",
+        model="models/text-embedding-004",
         content=text,
         task_type="retrieval_query"
     )
