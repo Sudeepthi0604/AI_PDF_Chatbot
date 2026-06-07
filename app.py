@@ -61,7 +61,6 @@ def hash_password(password, salt=None):
 
     return base64.b64encode(pwd_hash).decode(), salt
 
-
 def create_user(username, password):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
