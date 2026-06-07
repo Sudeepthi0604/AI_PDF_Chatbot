@@ -13,23 +13,16 @@ import google.generativeai as genai
 api_key = st.secrets.get("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 
-
-# =====================
 # CONFIG
-# =====================
-st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 
+st.set_page_config(page_title="AI PDF Chatbot", layout="wide")
 model = genai.GenerativeModel("gemini-2.5-flash")
     
-
-
-# =====================
 # DATABASE
-# =====================
+
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,10 +38,8 @@ def init_db():
 
 init_db()
 
-
-# =====================
 # PASSWORD HASHING
-# =====================
+
 def hash_password(password, salt=None):
     if not salt:
         salt = secrets.token_hex(16)
@@ -76,7 +67,7 @@ def create_user(username, password):
         )
         conn.commit()
         return True
-    except:
+    except sqlite3.IntegrityError:
         return False
     finally:
         conn.close()
@@ -97,11 +88,9 @@ def verify_user(username, password):
     new_hash, _ = hash_password(password, salt)
 
     return stored_hash == new_hash
-
-
-# =====================
+    
 # SESSION STATE
-# =====================
+
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "user" not in st.session_state:
@@ -114,11 +103,9 @@ if "chunks" not in st.session_state:
     st.session_state.chunks = []
 if "metadata" not in st.session_state:
     st.session_state.metadata = []
-
-
-# =====================
+    
 # AUTH UI
-# =====================
+
 st.title("📄🔐 AI PDF Chatbot")
 
 menu = st.sidebar.radio("Auth", ["Login", "Signup"])
@@ -163,10 +150,8 @@ if st.sidebar.button("Logout"):
     st.session_state.index = None
     st.rerun()
 
-
-# =====================
 # PDF PROCESSING
-# =====================
+
 def extract_text(pdf_files):
     all_text = {}
 
@@ -202,12 +187,8 @@ def chunk_text(text, chunk_size=1000, overlap=200):
 
     return chunks
 
-
-
-
-# =====================
 # EMBEDDINGS
-# =====================
+
 def embed_text(texts):
     vectors = []
 
@@ -217,13 +198,13 @@ def embed_text(texts):
 
         response = genai.embed_content(
             model="models/text-embedding-004",
-            content=text,
+            content=t,
             task_type="retrieval_document"
         )
 
         vectors.append(response["embedding"])
 
-    # 🔥 ADD THIS SAFETY CHECK HERE
+    # ADD THIS SAFETY CHECK HERE
     if len(vectors) == 0:
         st.error("No embeddings generated")
         st.stop()
@@ -233,7 +214,7 @@ def embed_text(texts):
 
 
 @st.cache_data(show_spinner=False)
-def embed_query(text):
+def embed_query(texts):
     response = genai.embed_content(
         model="models/text-embedding-004",
         content=text,
@@ -242,9 +223,8 @@ def embed_query(text):
 
     return np.array([response["embedding"]], dtype="float32")
 
-   
 # FAISS INDEX
-# =====================
+
 def build_index(all_chunks):
     vectors = embed_text(all_chunks)
 
@@ -276,10 +256,8 @@ def search(query, index, chunks, metadata, k=5):
 
     return results
 
-
-# =====================
 # GEMINI ANSWER
-# =====================
+
 def ask_gemini(context, question):
     prompt = f"""
 You are a helpful AI assistant.
@@ -296,10 +274,8 @@ Answer clearly and simply:
     response = model.generate_content(prompt)
     return response.text
 
-
-# =====================
 # UI - PDF UPLOAD
-# =====================
+
 st.header("📄 AI PDF Chatbot")
 
 pdf_files = st.file_uploader(
@@ -327,24 +303,22 @@ if st.button("Process PDFs") and pdf_files:
         st.error("No text found in PDFs")
         st.stop()
 
-    # 🔥 MUST BE OUTSIDE if-block
+   
     st.session_state.index = build_index(all_chunks)
     st.session_state.chunks = all_chunks
     st.session_state.metadata = metadata
 
     st.success("PDFs processed successfully!")
 
-# =====================
+
 # SAFE CHECK
-# =====================
+
 if st.session_state.get("index") is None:
     st.info("Upload and process PDFs first")
     st.stop()
 
-
-# =====================
 # CHAT
-# =====================
+
 question = st.text_input("Ask anything from your PDFs")
 
 if st.button("Ask") and question:
@@ -362,10 +336,8 @@ if st.button("Ask") and question:
 
     st.session_state.chat_history.append((question, answer))
 
-
-# =====================
 # CHAT HISTORY
-# =====================
+
 st.subheader("💬 Chat History")
 
 for q, a in reversed(st.session_state.chat_history):
