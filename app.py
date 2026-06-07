@@ -11,6 +11,11 @@ import google.generativeai as genai
 
 
 api_key = st.secrets.get("GOOGLE_API_KEY")
+
+if not api_key:
+    st.error("API Key missing in secrets.toml")
+    st.stop()
+
 genai.configure(api_key=api_key)
 
 # CONFIG
@@ -23,6 +28,7 @@ model = genai.GenerativeModel("gemini-2.5-flash")
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,6 +43,8 @@ def init_db():
     conn.close()
 
 init_db()
+
+
 
 # PASSWORD HASHING
 
@@ -67,7 +75,7 @@ def create_user(username, password):
         )
         conn.commit()
         return True
-    except sqlite3.IntegrityError:
+    except:
         return False
     finally:
         conn.close()
@@ -88,7 +96,9 @@ def verify_user(username, password):
     new_hash, _ = hash_password(password, salt)
 
     return stored_hash == new_hash
-    
+
+
+
 # SESSION STATE
 
 if "auth" not in st.session_state:
@@ -103,7 +113,9 @@ if "chunks" not in st.session_state:
     st.session_state.chunks = []
 if "metadata" not in st.session_state:
     st.session_state.metadata = []
-    
+
+
+
 # AUTH UI
 
 st.title("📄🔐 AI PDF Chatbot")
@@ -150,6 +162,7 @@ if st.sidebar.button("Logout"):
     st.session_state.index = None
     st.rerun()
 
+
 # PDF PROCESSING
 
 def extract_text(pdf_files):
@@ -187,6 +200,10 @@ def chunk_text(text, chunk_size=1000, overlap=200):
 
     return chunks
 
+
+
+
+
 # EMBEDDINGS
 
 def embed_text(texts):
@@ -197,14 +214,14 @@ def embed_text(texts):
             continue
 
         response = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-001",
             content=t,
             task_type="retrieval_document"
         )
 
         vectors.append(response["embedding"])
 
-    # ADD THIS SAFETY CHECK HERE
+    # 🔥 ADD THIS SAFETY CHECK HERE
     if len(vectors) == 0:
         st.error("No embeddings generated")
         st.stop()
@@ -216,13 +233,14 @@ def embed_text(texts):
 @st.cache_data(show_spinner=False)
 def embed_query(texts):
     response = genai.embed_content(
-        model="models/text-embedding-004",
+        model="models/gemini-embedding-001",
         content=text,
         task_type="retrieval_query"
     )
 
     return np.array([response["embedding"]], dtype="float32")
 
+   
 # FAISS INDEX
 
 def build_index(all_chunks):
@@ -256,6 +274,8 @@ def search(query, index, chunks, metadata, k=5):
 
     return results
 
+
+
 # GEMINI ANSWER
 
 def ask_gemini(context, question):
@@ -273,6 +293,8 @@ Answer clearly and simply:
 
     response = model.generate_content(prompt)
     return response.text
+
+
 
 # UI - PDF UPLOAD
 
@@ -303,7 +325,7 @@ if st.button("Process PDFs") and pdf_files:
         st.error("No text found in PDFs")
         st.stop()
 
-   
+    # 🔥 MUST BE OUTSIDE if-block
     st.session_state.index = build_index(all_chunks)
     st.session_state.chunks = all_chunks
     st.session_state.metadata = metadata
@@ -316,6 +338,7 @@ if st.button("Process PDFs") and pdf_files:
 if st.session_state.get("index") is None:
     st.info("Upload and process PDFs first")
     st.stop()
+
 
 # CHAT
 
@@ -346,3 +369,4 @@ for q, a in reversed(st.session_state.chat_history):
     st.markdown("---")
 
    
+
